@@ -70,7 +70,7 @@ function StartApplicationDialog({ onDone }: { onDone: () => void }) {
       toast.success(form.contextMode === "limited" ? "Application created. Preparing your limited-context outreach…" : "Application created. Preparing your tailored drafts…");
       try {
         await generate.mutateAsync({ id: job.id });
-        toast.success(form.contextMode === "limited" ? "Your factual outreach email is ready to review. Your master resume was left unchanged." : "Your tailored resume and outreach email are ready to review.");
+        toast.success(form.contextMode === "limited" ? "Your factual outreach email is ready to review. Your master resume was left unchanged." : "Your one-page tailored resume and outreach email are ready to preview. Approve the resume before exporting it.");
       } catch (error) { toast.error(error instanceof Error ? error.message : "The job was saved, but its drafts need another try."); }
       setLocation(`/jobs/${job.id}`);
     } catch (error) { toast.error(error instanceof Error ? error.message : "The application could not be created."); }

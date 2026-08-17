@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createDocxBlob, createExportFilename, createPdfArrayBuffer, formatDraftBlocks } from "./documentExport";
+import { createDocxBlob, createExportFilename, createPdfArrayBuffer, formatDraftBlocks, resumeFitsOnePage } from "./documentExport";
 
 const sampleDocument = {
   company: "Northstar",
@@ -34,5 +34,12 @@ describe("document export formatting", () => {
     ]);
     expect(docx.size).toBeGreaterThan(500);
     expect(pdf.byteLength).toBeGreaterThan(500);
+  });
+
+  it("keeps resume exports to one page by rejecting content that cannot fit the compact layout", () => {
+    const tooLong = `# Candidate Name\ncontact@example.com\n## EXPERIENCE\n${Array.from({ length: 140 }, (_, index) => `- Factual accomplishment number ${index + 1} with a supported result.`).join("\n")}`;
+    expect(resumeFitsOnePage(tooLong)).toBe(false);
+    expect(() => createPdfArrayBuffer({ ...sampleDocument, content: tooLong }))
+      .toThrow("too long for one page");
   });
 });

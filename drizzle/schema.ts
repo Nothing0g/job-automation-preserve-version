@@ -63,6 +63,7 @@ export const jobs = mysqlTable(
     sourceUrl: varchar("sourceUrl", { length: 2000 }),
     status: mysqlEnum("status", applicationStatuses).default("to-apply").notNull(),
     tailoredResume: text("tailoredResume"),
+    tailoredResumeApprovedAt: timestamp("tailoredResumeApprovedAt"),
     emailDraft: text("emailDraft"),
     notes: text("notes"),
     nextAction: varchar("nextAction", { length: 500 }),

@@ -3,10 +3,11 @@ import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { applicationStatuses, jobContextModes } from "../drizzle/schema";
 import * as db from "./db";
-import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages } from "./lib/aiPrompts";
+import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages, buildResumeShorteningMessages } from "./lib/aiPrompts";
 import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
 import { appendEmailSignature } from "./lib/emailSignature";
+import { resumeFitsOnePage } from "./lib/onePageResume";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
@@ -55,6 +56,17 @@ function contentFrom(result: Awaited<ReturnType<typeof invokeLLM>>) {
 async function preferredModel() {
   const catalog = await listLLMModels();
   return catalog.data.find(model => model.id.startsWith("claude-sonnet"))?.id ?? catalog.data.find(model => model.id === "gpt-5")?.id ?? catalog.data.find(model => model.id.startsWith("gpt-5"))?.id;
+}
+
+async function generateOnePageResume(model: string | undefined, profile: { resumeText: string | null; personalBio: string | null; resumeFileUrl?: string }, job: { company: string; role: string; jobDescription: string; contextMode: "full" | "limited" }) {
+  let draft = contentFrom(await invokeLLM({ model, messages: buildResumeMessages(profile, job), maxTokens: 2600 }));
+  for (let attempt = 0; attempt < 2 && !resumeFitsOnePage(draft); attempt += 1) {
+    draft = contentFrom(await invokeLLM({ model, messages: buildResumeShorteningMessages(profile, job, draft), maxTokens: 1800 }));
+  }
+  if (!resumeFitsOnePage(draft)) {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "The resume draft could not be condensed to the fixed one-page format. Please try generating it again." });
+  }
+  return draft;
 }
 
 export const appRouter = router({
@@ -137,13 +149,27 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         const user = await personalUser();
         const { id, followUpAt, nextAction, ...data } = input;
+        const resumeChanged = data.tailoredResume !== undefined;
+        const targetChanged = ["company", "role", "jobDescription", "contextMode"].some(field => data[field as keyof typeof data] !== undefined);
         const updated = await db.updateJobForUser(user.id, id, {
           ...data,
+          ...((resumeChanged || targetChanged) ? { tailoredResumeApprovedAt: null } : {}),
           ...(nextAction === undefined ? {} : { nextAction: nextAction || null }),
           ...(followUpAt === undefined ? {} : { followUpAt: parseFollowUpDate(followUpAt) }),
         });
         if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         return updated;
+      }),
+    setResumeApproval: publicProcedure
+      .input(z.object({ id: z.number().int().positive(), approved: z.boolean() }))
+      .mutation(async ({ input }) => {
+        const user = await personalUser();
+        const job = await db.getJobForUser(user.id, input.id);
+        if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
+        if (input.approved && !job.tailoredResume?.trim()) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Generate or save a tailored resume before approving it." });
+        }
+        return db.updateJobForUser(user.id, job.id, { tailoredResumeApprovedAt: input.approved ? new Date() : null });
       }),
     generateDrafts: publicProcedure
       .input(z.object({ id: z.number().int().positive() }))
@@ -161,11 +187,11 @@ export const appRouter = router({
           const emailResult = await invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 });
           return db.updateJobForUser(user.id, job.id, { emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
         }
-        const [resumeResult, emailResult] = await Promise.all([
-          invokeLLM({ model, messages: buildResumeMessages(profileContext, job), maxTokens: 6000 }),
+        const [tailoredResume, emailResult] = await Promise.all([
+          generateOnePageResume(model, profileContext, job),
           invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),
         ]);
-        return db.updateJobForUser(user.id, job.id, { tailoredResume: contentFrom(resumeResult), emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
+        return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
       }),
   }),
 });

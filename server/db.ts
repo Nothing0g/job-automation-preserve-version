@@ -138,6 +138,7 @@ export async function updateJobForUser(
     sourceUrl: string | null;
     status: ApplicationStatus;
     tailoredResume: string;
+    tailoredResumeApprovedAt: Date | null;
     emailDraft: string;
     notes: string;
     nextAction: string | null;

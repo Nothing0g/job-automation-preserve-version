@@ -10,8 +10,10 @@ const dbMocks = vi.hoisted(() => ({
   createJob: vi.fn(),
   updateJobForUser: vi.fn(),
 }));
+const llmMocks = vi.hoisted(() => ({ invokeLLM: vi.fn(), listLLMModels: vi.fn() }));
 
 vi.mock("./db", () => dbMocks);
+vi.mock("./_core/llm", () => llmMocks);
 
 import { appRouter } from "./routers";
 
@@ -87,5 +89,37 @@ describe("personal workspace routes", () => {
     dbMocks.updateJobForUser.mockResolvedValue({ id: 9 });
     await caller().jobs.update({ id: 9, nextAction: null, followUpAt: null });
     expect(dbMocks.updateJobForUser).toHaveBeenCalledWith(personalUser.id, 9, { nextAction: null, followUpAt: null });
+  });
+
+  it("persists approval only after a tailored resume exists", async () => {
+    dbMocks.getJobForUser.mockResolvedValue({ id: 9, tailoredResume: "# Candidate\n## EXPERIENCE\n- Supported achievement" });
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 9, tailoredResumeApprovedAt: new Date("2026-08-17T00:00:00.000Z") });
+
+    await caller().jobs.setResumeApproval({ id: 9, approved: true });
+
+    expect(dbMocks.updateJobForUser).toHaveBeenCalledWith(personalUser.id, 9, { tailoredResumeApprovedAt: expect.any(Date) });
+  });
+
+  it("does not approve an empty tailored resume", async () => {
+    dbMocks.getJobForUser.mockResolvedValue({ id: 9, tailoredResume: null });
+    await expect(caller().jobs.setResumeApproval({ id: 9, approved: true })).rejects.toThrow("Generate or save a tailored resume");
+    expect(dbMocks.updateJobForUser).not.toHaveBeenCalled();
+  });
+
+  it("shortens an overlong generated resume before it is persisted", async () => {
+    const overlong = `# Candidate Name\ncontact@example.com\n## EXPERIENCE\n${Array.from({ length: 150 }, (_, index) => `- Factual accomplishment ${index + 1} with a documented outcome and relevant implementation detail.`).join("\n")}`;
+    const compact = "# Candidate Name\ncontact@example.com\n## EXPERIENCE\n### Analyst\n- Built a factual reporting workflow.";
+    dbMocks.getMasterProfile.mockResolvedValue({ resumeText: "Analyst with reporting experience.", personalBio: null, emailSignature: null, resumeFileKey: null });
+    dbMocks.getJobForUser.mockResolvedValue({ id: 9, company: "Northstar", role: "Analyst", jobDescription: "Use reporting to support decisions.", contextMode: "full" });
+    llmMocks.listLLMModels.mockResolvedValue({ data: [{ id: "claude-sonnet-test" }] });
+    llmMocks.invokeLLM
+      .mockResolvedValueOnce({ choices: [{ message: { content: overlong } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: "Hello Hiring Team," } }] })
+      .mockResolvedValueOnce({ choices: [{ message: { content: compact } }] });
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 9, tailoredResume: compact });
+
+    await caller().jobs.generateDrafts({ id: 9 });
+
+    expect(dbMocks.updateJobForUser).toHaveBeenLastCalledWith(personalUser.id, 9, expect.objectContaining({ tailoredResume: compact, tailoredResumeApprovedAt: null }));
   });
 });

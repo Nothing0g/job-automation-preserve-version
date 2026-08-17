@@ -21,9 +21,22 @@ export function buildResumeMessages(profile: ProfileContext, job: JobContext): M
   return [
     {
       role: "system",
-      content: `You are a precise resume editor. ${groundingRules} Produce a standalone tailored resume in clean Markdown with conventional headings and concise bullet points. Preserve the candidate's identity and factual employment history; prioritize, reorder, or rephrase supported information to make relevant experience easier to find. Do not add a cover letter, explanation, or commentary.`,
+      content: `You are a precise resume editor. ${groundingRules} Produce a standalone, truthful one-page resume in clean Markdown. The output will be rendered in a compact, classic ATS-readable format modelled on a strong one-page analyst resume: a centered name and contact line when explicitly supplied, small uppercase section labels, concise role/project titles, and tight factual bullets. Use this structure only where source material supports it: # CANDIDATE NAME, a plain contact line, ## PROFESSIONAL SUMMARY, ## EDUCATION, ## PROFESSIONAL EXPERIENCE, ## PROJECTS, ## SKILLS, ## CERTIFICATIONS, and ## ACHIEVEMENTS & EXTRA-CURRICULARS. Use ### for a role or project title and ordinary paragraphs for the corresponding organization, location, and dates only when present in the candidate source. Keep the summary to one sentence; keep the entire resume under approximately 620 words; select the most relevant, explicitly supported items; and limit each included role or project to three or four compact bullets. Favor stronger ordering and exact rephrasing over additional claims. Do not invent a name, contact details, employer, project, metric, date, or section. Do not add code fences, horizontal dividers, a cover letter, explanation, commentary, skills not directly stated, or any text outside the resume.`,
     },
     { role: "user", content: sourceParts(profile, job) as Message["content"] },
+  ];
+}
+
+export function buildResumeShorteningMessages(profile: ProfileContext, job: JobContext, draft: string): Message[] {
+  return [
+    {
+      role: "system",
+      content: `You are the final one-page resume editor. ${groundingRules} The supplied draft overflowed the fixed one-page document layout. Rewrite only that resume so it fits one page while retaining the strongest role-relevant, explicitly supported evidence. Omit lower-priority bullets, redundant phrases, and unnecessary sections; compress wording instead of shrinking the type. Keep the exact Markdown structure conventions for a compact resume: # for candidate name, ## for sections, ### for role/project titles, and concise bullets. Do not use code fences or horizontal dividers. Do not add facts, explanations, or commentary. Return only the revised resume.`,
+    },
+    {
+      role: "user",
+      content: [...sourceParts(profile, job), { type: "text", text: `DRAFT TO SHORTEN\n${draft}` }] as Message["content"],
+    },
   ];
 }
 

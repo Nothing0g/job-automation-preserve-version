@@ -11,6 +11,8 @@ describe("grounded AI prompts", () => {
   it("places the complete candidate source and job description in the resume request", () => {
     const messages = buildResumeMessages(profile, job);
     expect(String(messages[0].content)).toContain("Do not invent");
+    expect(String(messages[0].content)).toContain("one-page resume");
+    expect(String(messages[0].content)).toContain("620 words");
     expect(JSON.stringify(messages[1].content)).toContain(profile.resumeText);
     expect(JSON.stringify(messages[1].content)).toContain(job.jobDescription);
   });

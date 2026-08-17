@@ -43,3 +43,11 @@
 - [x] Manually validate the paste-text fallback in the intake dialog and record the result in the QA notes.
 - [x] Add focused regression coverage for the paste-text fallback when a public-link import fails or yields insufficient details.
 - [x] Manually validate the paste-text fallback in the intake dialog and record the result in the QA notes.
+- [x] Review the supplied reference resume and document its reusable one-page visual and content conventions.
+- [x] Constrain AI resume tailoring to a truthful one-page output derived only from the saved master profile and job context.
+- [x] Add an in-app resume preview that must be reviewed before DOCX or PDF export.
+- [x] Add an explicit user-approval state for each tailored resume before it is marked ready for use.
+- [x] Align DOCX and PDF resume exports with the approved one-page reference style.
+- [x] Add automated and manual validation for the one-page preview, approval, and export workflow.
+- [x] Enforce fixed one-page compliance during AI resume generation before a draft is saved.
+- [x] Add regression coverage showing that an overlong generated resume is shortened or rejected before persistence.
