@@ -74,7 +74,7 @@ export async function getMasterProfile(userId: number) {
 
 export async function saveMasterProfile(
   userId: number,
-  data: { resumeText?: string; personalBio?: string; resumeFileKey?: string },
+  data: { resumeText?: string; personalBio?: string; emailSignature?: string; resumeFileKey?: string },
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
@@ -86,6 +86,7 @@ export async function saveMasterProfile(
       userId,
       resumeText: data.resumeText ?? null,
       personalBio: data.personalBio ?? null,
+      emailSignature: data.emailSignature ?? null,
       resumeFileKey: data.resumeFileKey ?? null,
     });
   }

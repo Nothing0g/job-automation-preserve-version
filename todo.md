@@ -34,3 +34,12 @@
 - [x] Add a public job-posting URL importer that extracts available visible title, company, and job-description text for form review.
 - [x] Add bounded, safe public-link fetching and clear feedback for unavailable or client-rendered postings.
 - [x] Add test coverage and validate the No JD and public-link intake paths.
+- [x] Add a reusable email-signature setting to the personal master profile.
+- [x] Append the saved signature to generated outreach email drafts without altering their factual body content.
+- [x] Add an editable paste-text fallback when a public job link cannot expose meaningful posting details.
+- [x] Add a dashboard follow-up reminder tracker that clearly separates overdue, due-today, upcoming, and unscheduled applications.
+- [x] Add regression coverage and validate the signature, fallback intake, and reminder tracker workflows.
+- [x] Add focused regression coverage for the paste-text fallback when a public-link import fails or yields insufficient details.
+- [x] Manually validate the paste-text fallback in the intake dialog and record the result in the QA notes.
+- [x] Add focused regression coverage for the paste-text fallback when a public-link import fails or yields insufficient details.
+- [x] Manually validate the paste-text fallback in the intake dialog and record the result in the QA notes.

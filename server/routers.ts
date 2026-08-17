@@ -6,6 +6,7 @@ import * as db from "./db";
 import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages } from "./lib/aiPrompts";
 import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
+import { appendEmailSignature } from "./lib/emailSignature";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
@@ -73,7 +74,7 @@ export const appRouter = router({
       return (await db.getMasterProfile(user.id)) ?? null;
     }),
     save: publicProcedure
-      .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional() }))
+      .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional(), emailSignature: z.string().max(6_000).optional() }))
       .mutation(async ({ input }) => {
         const user = await personalUser();
         return db.saveMasterProfile(user.id, input);
@@ -158,13 +159,13 @@ export const appRouter = router({
         const model = await preferredModel();
         if (job.contextMode === "limited") {
           const emailResult = await invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 });
-          return db.updateJobForUser(user.id, job.id, { emailDraft: contentFrom(emailResult) });
+          return db.updateJobForUser(user.id, job.id, { emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
         }
         const [resumeResult, emailResult] = await Promise.all([
           invokeLLM({ model, messages: buildResumeMessages(profileContext, job), maxTokens: 6000 }),
           invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),
         ]);
-        return db.updateJobForUser(user.id, job.id, { tailoredResume: contentFrom(resumeResult), emailDraft: contentFrom(emailResult) });
+        return db.updateJobForUser(user.id, job.id, { tailoredResume: contentFrom(resumeResult), emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
       }),
   }),
 });
