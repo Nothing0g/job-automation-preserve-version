@@ -24,3 +24,8 @@
 - [x] Record explicit manual validation evidence for the light/dark switch and external-hosting handoff.
 - [x] Test the direct-access user creation-or-reuse fallback through the production helper contract.
 - [x] Perform and record an actual dark-mode visual QA pass for the dashboard and master profile pages.
+- [x] Add professional DOCX export generation for saved tailored resumes and personalized cover letters.
+- [x] Add professional PDF export generation for saved tailored resumes and personalized cover letters.
+- [x] Add clear per-document DOCX and PDF export controls in the application workspace.
+- [x] Add automated export tests and manually validate the downloaded document outputs.
+- [x] Generate and inspect DOCX/PDF export artifacts to confirm saved draft content is present in both downloadable formats.

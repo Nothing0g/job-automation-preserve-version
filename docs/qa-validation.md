@@ -8,6 +8,7 @@
 | Light theme | Reviewed at desktop and mobile sizes. The warm editorial surface system, form elements, side navigation, cards, and empty state rendered without clipping or unreadable text. |
 | Dark theme | Captured the dashboard and master profile in dark mode at desktop size. The final midnight-indigo surfaces, amber action accent, violet navigation state, form panels, and corrected profile hero all rendered with readable text and coherent depth. The persistent mode control switches the root `.dark` class. |
 | Responsive behavior | Reviewed the application dashboard and master profile pages at 1280px and 375px widths. Navigation converts to a compact header with the theme toggle retained. |
+| DOCX and PDF exports | Generated actual resume DOCX and PDF artifacts from a representative saved draft. The DOCX XML contained the expected title, role/company subtitle, headings, bullets, and body text. The rendered one-page PDF displayed the same factual content with clear hierarchy and spacing. |
 | Hosting handoff | `README.md` and `docs/hosting-handoff.md` explain the private direct-access boundary and the managed services that need replacements before an external Vercel deployment. |
 
 ## Automated checks
@@ -19,4 +20,4 @@ pnpm test
 pnpm check
 ```
 
-The regression suite covers AI grounding prompts, tracker date parsing, the absent-profile null response, personal-workspace job creation with tracker fields, and explicit tracker-field clearing on update.
+The regression suite covers AI grounding prompts, tracker date parsing, the absent-profile null response, personal-workspace job creation with tracker fields, explicit tracker-field clearing on update, export formatting, descriptive export filenames, and non-empty DOCX/PDF bytes.
