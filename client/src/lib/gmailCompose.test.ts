@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildGmailComposeUrl } from "./gmailCompose";
+import { buildGmailComposeUrl, gmailComposeGuidance } from "./gmailCompose";
 
 describe("Gmail compose handoff", () => {
   it("prefills recipient, subject, and body without invoking any send action", () => {
@@ -16,8 +16,19 @@ describe("Gmail compose handoff", () => {
     expect(url.searchParams.has("send")).toBe(false);
   });
 
-  it("does not create a compose URL when recipient or draft content is absent", () => {
-    expect(buildGmailComposeUrl({ to: "", subject: "Subject", body: "Draft" })).toBeNull();
+  it("opens Gmail with the subject and draft when the recipient is not yet known", () => {
+    const url = new URL(buildGmailComposeUrl({ to: "", subject: "Subject", body: "Draft" })!);
+    expect(url.searchParams.get("su")).toBe("Subject");
+    expect(url.searchParams.get("body")).toBe("Draft");
+    expect(url.searchParams.has("to")).toBe(false);
+  });
+
+  it("does not create a compose URL when the draft content is absent", () => {
     expect(buildGmailComposeUrl({ to: "hiring@example.com", subject: "Subject", body: "  " })).toBeNull();
+  });
+
+  it("provides explicit recipient guidance for both compose states", () => {
+    expect(gmailComposeGuidance("hiring@example.com")).toContain("saved recipient");
+    expect(gmailComposeGuidance("")).toContain("add it in Gmail");
   });
 });

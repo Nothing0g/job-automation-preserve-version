@@ -67,6 +67,19 @@
 - [x] Document the ATS-safe resume structure and export constraints in the QA record using the implemented preview and export rules.
 - [x] Re-read the QA record to confirm the ATS-safe resume documentation and Gmail no-send boundary are both preserved.
 - [ ] Validate the Gmail compose handoff in the browser, confirming recipient, subject, and body prefill while retaining the user-only Send action.
+- [x] Diagnose and fix the Gmail compose action so its manual handoff works reliably in the application workspace.
+- [x] Add a downloadable Excel workbook of the current application tracker with all available job, status, follow-up, source, and draft-detail fields.
+- [x] Add automated coverage and manual validation for the repaired Gmail handoff and spreadsheet export contents.
+- [ ] Manually validate the Gmail compose handoff with a real browser click and confirm recipient, subject, and body prefill while Send remains user-controlled.
+- [x] Generate a real tracker workbook, inspect its rows and headers locally, and record the result in the QA log.
+- [x] Confirm the QA record contains the generated tracker workbook path, sheet, headers, and sample-row inspection evidence.
+- [x] Re-read the QA record after the explicit tracker workbook path update before saving the repair and export revision.
+- [x] Allow the Gmail compose handoff to open with subject and draft pre-filled even when no recipient email is stored, with clear recipient guidance.
+- [x] Update the Gmail workspace guidance so roles without contact email keep the compose CTA available and clearly instruct the user to add the recipient in Gmail.
+- [x] Add UI-level regression coverage for the recipient-optional Gmail CTA and guidance text.
+- [x] Re-run validation after correcting the Gmail workspace guidance and CTA behavior.
+- [x] Add component-level coverage for an active recipient-optional Gmail CTA and its visible recipient guidance.
+- [x] Add component-level coverage for the active Gmail CTA and saved-recipient guidance when a contact email exists.
 - [x] Move saved Email, Mobile, LinkedIn, GitHub, and Portfolio links into the tailored-resume header as concise clickable labels in DOCX and PDF output.
 - [x] Ensure the resume preview header shows only active saved profile links with no raw URLs or duplicate cover-letter-only link treatment.
 - [x] Replace the current interface visual treatment with a classier minimalist colour system for both light and dark modes.
