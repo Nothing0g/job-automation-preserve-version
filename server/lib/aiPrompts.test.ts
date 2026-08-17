@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildEmailMessages, buildResumeMessages } from "./aiPrompts";
+import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages } from "./aiPrompts";
 
 const profile = {
   resumeText: "Analyst at Northstar. Built weekly reporting in SQL.",
   personalBio: "I value direct, thoughtful communication.",
 };
-const job = { company: "Orbit", role: "Data Analyst", jobDescription: "Use SQL to improve reporting." };
+const job = { company: "Orbit", role: "Data Analyst", jobDescription: "Use SQL to improve reporting.", contextMode: "full" as const };
 
 describe("grounded AI prompts", () => {
   it("places the complete candidate source and job description in the resume request", () => {
@@ -19,5 +19,12 @@ describe("grounded AI prompts", () => {
     const messages = buildEmailMessages(profile, job);
     expect(String(messages[0].content)).toContain("Do not use external research");
     expect(String(messages[0].content)).toContain("only the email body");
+  });
+
+  it("uses a factual email-only approach when no job description is available", () => {
+    const messages = buildLimitedContextEmailMessages(profile, { ...job, jobDescription: "", contextMode: "limited" });
+    expect(String(messages[0].content)).toContain("has not provided a job description");
+    expect(String(messages[0].content)).toContain("request the detailed job description");
+    expect(String(messages[0].content)).toContain("tailored resume claim");
   });
 });

@@ -3,6 +3,7 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   ApplicationStatus,
   InsertUser,
+  JobContextMode,
   User,
   jobs,
   masterProfiles,
@@ -110,6 +111,9 @@ export async function createJob(
     company: string;
     role: string;
     jobDescription: string;
+    contextMode: JobContextMode;
+    contactEmail?: string | null;
+    sourceUrl?: string | null;
     status: ApplicationStatus;
     nextAction?: string | null;
     followUpAt?: Date | null;
@@ -128,6 +132,9 @@ export async function updateJobForUser(
     company: string;
     role: string;
     jobDescription: string;
+    contextMode: JobContextMode;
+    contactEmail: string | null;
+    sourceUrl: string | null;
     status: ApplicationStatus;
     tailoredResume: string;
     emailDraft: string;

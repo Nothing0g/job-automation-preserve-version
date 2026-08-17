@@ -29,3 +29,8 @@
 - [x] Add clear per-document DOCX and PDF export controls in the application workspace.
 - [x] Add automated export tests and manually validate the downloaded document outputs.
 - [x] Generate and inspect DOCX/PDF export artifacts to confirm saved draft content is present in both downloadable formats.
+- [x] Add No JD Mode so an application can be created with only company, role, and contact email.
+- [x] Generate a limited-context outreach email that asks for a detailed JD or application guidance without inventing qualifications.
+- [x] Add a public job-posting URL importer that extracts available visible title, company, and job-description text for form review.
+- [x] Add bounded, safe public-link fetching and clear feedback for unavailable or client-rendered postings.
+- [x] Add test coverage and validate the No JD and public-link intake paths.

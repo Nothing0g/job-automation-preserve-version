@@ -54,6 +54,7 @@ describe("personal workspace routes", () => {
       company: "Northstar",
       role: "Analyst",
       jobDescription: "Use analysis, reporting, and SQL to help the operations team make better decisions every week.",
+      contextMode: "full",
       status: "to-apply",
       nextAction: "Send a concise note to the hiring team",
       followUpAt: "2026-09-01",
@@ -62,6 +63,23 @@ describe("personal workspace routes", () => {
     expect(dbMocks.createJob).toHaveBeenCalledWith(personalUser.id, expect.objectContaining({
       nextAction: "Send a concise note to the hiring team",
       followUpAt: new Date("2026-09-01T12:00:00.000Z"),
+    }));
+  });
+
+  it("creates a limited-context application with only role, company, and contact email", async () => {
+    dbMocks.createJob.mockResolvedValue({ id: 10, company: "Brivo", role: "AI Product Intern" });
+    await caller().jobs.create({
+      company: "Brivo",
+      role: "AI Product Intern",
+      jobDescription: "",
+      contextMode: "limited",
+      contactEmail: "hiring@brivo.com",
+      status: "to-apply",
+    });
+    expect(dbMocks.createJob).toHaveBeenCalledWith(personalUser.id, expect.objectContaining({
+      contextMode: "limited",
+      contactEmail: "hiring@brivo.com",
+      jobDescription: "",
     }));
   });
 

@@ -1,9 +1,10 @@
 import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { applicationStatuses } from "../drizzle/schema";
+import { applicationStatuses, jobContextModes } from "../drizzle/schema";
 import * as db from "./db";
-import { buildEmailMessages, buildResumeMessages } from "./lib/aiPrompts";
+import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessages } from "./lib/aiPrompts";
+import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM, listLLMModels } from "./_core/llm";
@@ -16,11 +17,23 @@ const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const jobFields = {
   company: z.string().trim().min(1).max(255),
   role: z.string().trim().min(1).max(255),
-  jobDescription: z.string().trim().min(40).max(100_000),
+  jobDescription: z.string().trim().max(100_000),
+  contextMode: z.enum(jobContextModes),
+  contactEmail: z.string().trim().email().max(320).nullable().optional(),
+  sourceUrl: z.string().url().max(2_000).nullable().optional(),
   status: statusSchema,
   nextAction: z.string().trim().max(500).nullable().optional(),
   followUpAt: dateInputSchema.nullable().optional(),
 };
+
+const createJobSchema = z.object(jobFields).superRefine((input, context) => {
+  if (input.contextMode === "full" && input.jobDescription.length < 40) {
+    context.addIssue({ code: "custom", path: ["jobDescription"], message: "Paste at least 40 characters of the job description, or use No JD Mode." });
+  }
+  if (input.contextMode === "limited" && !input.contactEmail) {
+    context.addIssue({ code: "custom", path: ["contactEmail"], message: "Enter the contact email for a No JD application." });
+  }
+});
 
 async function personalUser() {
   try {
@@ -84,16 +97,35 @@ export const appRouter = router({
   jobs: router({
     list: publicProcedure.query(async () => db.listJobs((await personalUser()).id)),
     get: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => db.getJobForUser((await personalUser()).id, input.id)),
-    create: publicProcedure.input(z.object(jobFields)).mutation(async ({ input }) => {
+    create: publicProcedure.input(createJobSchema).mutation(async ({ input }) => {
       const user = await personalUser();
-      return db.createJob(user.id, { ...input, nextAction: input.nextAction || null, followUpAt: parseFollowUpDate(input.followUpAt) });
+      return db.createJob(user.id, {
+        ...input,
+        jobDescription: input.jobDescription || "",
+        contactEmail: input.contactEmail || null,
+        sourceUrl: input.sourceUrl || null,
+        nextAction: input.nextAction || null,
+        followUpAt: parseFollowUpDate(input.followUpAt),
+      });
     }),
+    importPublicLink: publicProcedure
+      .input(z.object({ url: z.string().trim().url().max(2_000) }))
+      .mutation(async ({ input }) => {
+        try {
+          return await fetchPublicJobPosting(input.url);
+        } catch (error) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "This public job link could not be imported." });
+        }
+      }),
     update: publicProcedure
       .input(z.object({
         id: z.number().int().positive(),
         company: jobFields.company.optional(),
         role: jobFields.role.optional(),
         jobDescription: jobFields.jobDescription.optional(),
+        contextMode: jobFields.contextMode.optional(),
+        contactEmail: jobFields.contactEmail,
+        sourceUrl: jobFields.sourceUrl,
         status: statusSchema.optional(),
         tailoredResume: z.string().max(100_000).optional(),
         emailDraft: z.string().max(40_000).optional(),
@@ -124,6 +156,10 @@ export const appRouter = router({
         const resumeFileUrl = profile.resumeFileKey ? await storageGetSignedUrl(profile.resumeFileKey) : undefined;
         const profileContext = { resumeText: profile.resumeText, personalBio: profile.personalBio, resumeFileUrl };
         const model = await preferredModel();
+        if (job.contextMode === "limited") {
+          const emailResult = await invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 });
+          return db.updateJobForUser(user.id, job.id, { emailDraft: contentFrom(emailResult) });
+        }
         const [resumeResult, emailResult] = await Promise.all([
           invokeLLM({ model, messages: buildResumeMessages(profileContext, job), maxTokens: 6000 }),
           invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),

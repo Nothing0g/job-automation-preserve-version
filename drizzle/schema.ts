@@ -29,6 +29,8 @@ export const applicationStatuses = [
   "rejected",
 ] as const;
 
+export const jobContextModes = ["full", "limited"] as const;
+
 export const masterProfiles = mysqlTable(
   "master_profiles",
   {
@@ -55,6 +57,9 @@ export const jobs = mysqlTable(
     company: varchar("company", { length: 255 }).notNull(),
     role: varchar("role", { length: 255 }).notNull(),
     jobDescription: text("jobDescription").notNull(),
+    contextMode: mysqlEnum("contextMode", jobContextModes).default("full").notNull(),
+    contactEmail: varchar("contactEmail", { length: 320 }),
+    sourceUrl: varchar("sourceUrl", { length: 2000 }),
     status: mysqlEnum("status", applicationStatuses).default("to-apply").notNull(),
     tailoredResume: text("tailoredResume"),
     emailDraft: text("emailDraft"),
@@ -75,3 +80,4 @@ export type InsertUser = typeof users.$inferInsert;
 export type MasterProfile = typeof masterProfiles.$inferSelect;
 export type Job = typeof jobs.$inferSelect;
 export type ApplicationStatus = (typeof applicationStatuses)[number];
+export type JobContextMode = (typeof jobContextModes)[number];
