@@ -13,6 +13,11 @@ describe("grounded AI prompts", () => {
     expect(String(messages[0].content)).toContain("Do not invent");
     expect(String(messages[0].content)).toContain("one-page resume");
     expect(String(messages[0].content)).toContain("620 words");
+    expect(String(messages[0].content)).toContain("job's stated duties, tools, domain terms, and outcomes");
+    expect(String(messages[0].content)).toContain("Every retained bullet must either directly support a target priority");
+    expect(String(messages[0].content)).toContain("silently make a relevance map");
+    expect(String(messages[0].content)).toContain("kept, moved earlier, rephrased, compressed, or omitted");
+    expect(String(messages[0].content)).toContain("omit lower-relevance material");
     expect(JSON.stringify(messages[1].content)).toContain(profile.resumeText);
     expect(JSON.stringify(messages[1].content)).toContain(job.jobDescription);
   });
@@ -24,6 +29,7 @@ describe("grounded AI prompts", () => {
     expect(String(messages[0].content)).toContain("came across the");
     expect(String(messages[0].content)).toContain("perfect fit");
     expect(String(messages[0].content)).toContain("Build confidence through evidence");
+    expect(String(messages[0].content)).toContain("email body\” label");
   });
 
   it("uses a factual email-only approach when no job description is available", () => {

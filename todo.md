@@ -71,6 +71,21 @@
 - [x] Add a downloadable Excel workbook of the current application tracker with all available job, status, follow-up, source, and draft-detail fields.
 - [x] Add automated coverage and manual validation for the repaired Gmail handoff and spreadsheet export contents.
 - [ ] Manually validate the Gmail compose handoff with a real browser click and confirm recipient, subject, and body prefill while Send remains user-controlled.
+- [x] Require and persist a recipient email in Full Details job intake, while preserving No JD flexibility.
+- [x] Remove Gmail body wrapper text and separators so the composed draft contains only the personalized email content.
+- [ ] Add an approved tailored-resume attachment handoff to Gmail with a truthful manual-send boundary.
+- [x] Strengthen tailoring prompts and validation so each resume selectively emphasizes, rephrases, and removes content against the specific JD or role without fabrication.
+- [ ] Add automated and manual validation for recipient prefill, clean Gmail content, resume attachment handoff, and role-specific tailoring.
+- [x] Remove literal Markdown heading markers from the on-screen tailored-resume preview while retaining its section hierarchy.
+- [x] Add regression coverage that the preview renderer cleans heading markers as well as fences and dividers.
+- [x] Make the tailored-resume workspace preview-first so raw editing syntax is hidden until the user explicitly chooses to edit the source draft.
+- [x] Tighten resume generation around an explicit JD-to-evidence relevance pass that keeps, reorders, rephrases, and omits content only where facts support the target role.
+- [x] Add an editable company or hiring email field in each existing job workspace so legacy applications can prefill the Gmail recipient.
+- [x] Add regression coverage that workspace recipient-email edits persist and feed the Gmail compose handoff.
+- [x] Apply the same email-wrapper cleanup to legacy saved drafts in the workspace and Gmail handoff without requiring regeneration.
+- [x] Add regression coverage for display-time cleanup of existing wrapped email drafts.
+- [x] Enforce and test a non-empty valid recipient email in Full Details intake while preserving No JD recipient flexibility.
+- [x] Add regression coverage proving Full Details creation fails without recipient email and persists a valid recipient into the workspace and Gmail handoff.
 - [x] Generate a real tracker workbook, inspect its rows and headers locally, and record the result in the QA log.
 - [x] Confirm the QA record contains the generated tracker workbook path, sheet, headers, and sample-row inspection evidence.
 - [x] Re-read the QA record after the explicit tracker workbook path update before saving the repair and export revision.
@@ -90,3 +105,4 @@
 - [x] Re-run the full regression suite and TypeScript check after the strengthened resume-header link assertions.
 - [x] Record separate dashboard and workspace visual checks for the redesigned light and dark themes.
 - [x] Inspect an actual job workspace in both daylight and dark themes and record its visual QA separately.
+- [x] Add a focused UI regression confirming an updated workspace recipient is forwarded to the Gmail compose action.

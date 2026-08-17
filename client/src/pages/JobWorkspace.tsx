@@ -12,6 +12,7 @@ import {
   type ContactLinks,
   type ExportDocumentKind,
 } from "@/lib/documentExport";
+import { cleanEmailDraftForDisplay } from "@/lib/emailDraft";
 import { buildGmailComposeUrl, gmailComposeGuidance } from "@/lib/gmailCompose";
 import {
   ArrowLeft,
@@ -197,6 +198,7 @@ export default function JobWorkspace() {
   const { data: job, isLoading } = trpc.jobs.get.useQuery({ id: jobId }, { enabled: Number.isFinite(jobId) });
   const { data: profile } = trpc.profile.get.useQuery();
   const [form, setForm] = useState<WorkspaceForm>(emptyForm);
+  const [showResumeEditor, setShowResumeEditor] = useState(false);
   const [resumeApprovedAt, setResumeApprovedAt] = useState<Date | null>(null);
 
   useEffect(() => {
@@ -211,7 +213,7 @@ export default function JobWorkspace() {
       status: job.status,
       notes: job.notes ?? "",
       tailoredResume: job.tailoredResume ?? "",
-      emailDraft: job.emailDraft ?? "",
+      emailDraft: cleanEmailDraftForDisplay(job.emailDraft ?? ""),
       nextAction: job.nextAction ?? "",
       followUpAt: dateInput(job.followUpAt),
     });
@@ -231,7 +233,7 @@ export default function JobWorkspace() {
           status: data.status,
           notes: data.notes ?? "",
           tailoredResume: data.tailoredResume ?? "",
-          emailDraft: data.emailDraft ?? "",
+          emailDraft: cleanEmailDraftForDisplay(data.emailDraft ?? ""),
           nextAction: data.nextAction ?? "",
           followUpAt: dateInput(data.followUpAt),
         });
@@ -247,7 +249,7 @@ export default function JobWorkspace() {
   const generate = trpc.jobs.generateDrafts.useMutation({
     onSuccess: data => {
       if (data) {
-        setForm(current => ({ ...current, tailoredResume: data.tailoredResume ?? "", emailDraft: data.emailDraft ?? "" }));
+        setForm(current => ({ ...current, tailoredResume: data.tailoredResume ?? "", emailDraft: cleanEmailDraftForDisplay(data.emailDraft ?? "") }));
         setResumeApprovedAt(data.tailoredResumeApprovedAt ?? null);
       }
       toast.success(form.contextMode === "limited" ? "Factual outreach email ready. Your master resume was left unchanged." : "A one-page resume draft is ready to preview and approve.");
@@ -348,7 +350,12 @@ export default function JobWorkspace() {
               <>
                 <p className="data-label text-primary">Job description</p>
                 {form.sourceUrl && <p className="mt-2 break-all text-xs leading-5 text-muted-foreground">Imported from: {form.sourceUrl}</p>}
-                <Textarea value={form.jobDescription} onChange={event => setForm({ ...form, jobDescription: event.target.value })} className="mt-4 min-h-[350px] leading-6" />
+                <div className="mt-4 space-y-2">
+                  <Label htmlFor="workspace-contact">Company or hiring email</Label>
+                  <Input id="workspace-contact" type="email" value={form.contactEmail} onChange={event => setForm({ ...form, contactEmail: event.target.value })} placeholder="hiring@company.com" />
+                  <p className="text-xs leading-5 text-muted-foreground">Used to prefill the recipient when you open the personalized draft in Gmail.</p>
+                </div>
+                <Textarea value={form.jobDescription} onChange={event => setForm({ ...form, jobDescription: event.target.value })} className="mt-4 min-h-[300px] leading-6" />
               </>
             )}
           </section>
@@ -362,7 +369,6 @@ export default function JobWorkspace() {
               <div><p className="data-label text-primary">Tailored resume</p><h2 className="editorial-title mt-1 text-3xl">A factual, one-page draft</h2><p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">The studio uses AI only to select, reorder, and rephrase facts from your master profile for this job. It follows the compact reference format and never adds unsupported claims.</p></div>
               <ExportActions content={form.tailoredResume} kind="resume" fileStem={fileStem} company={form.company} role={form.role} contactLinks={profile?.contactLinks} requiresApproval approved={resumeApproved} />
             </div>
-            <Textarea value={form.tailoredResume} onChange={event => setForm({ ...form, tailoredResume: event.target.value })} placeholder="Generate a tailored resume after saving your master profile…" className="mt-5 min-h-[350px] font-mono text-[13px] leading-6" />
             <div className="mt-5 rounded-xl border border-primary/15 bg-accent/30 p-4">
               <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
                 <div className="flex gap-3"><Eye className="mt-0.5 h-4 w-4 shrink-0 text-primary" /><div><p className="text-sm font-semibold">Preview before export</p><p className="mt-1 text-xs leading-5 text-muted-foreground">This compact preview mirrors the one-page DOCX/PDF format. Saving edits or refreshing the draft returns it to review.</p></div></div>
@@ -370,6 +376,13 @@ export default function JobWorkspace() {
               </div>
               <div className="mt-4"><ResumePreview content={form.tailoredResume} contactLinks={profile?.contactLinks} /></div>
               {resumeApproved ? <p className="mt-3 text-xs font-medium text-emerald-700 dark:text-emerald-300">Approved {resumeApprovedAt ? new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(new Date(resumeApprovedAt)) : ""}. Export controls are enabled.</p> : <p className={`mt-3 text-xs ${!resumeFits && form.tailoredResume.trim() ? "font-medium text-amber-700 dark:text-amber-300" : "text-muted-foreground"}`}>{resumeHasUnsavedEdits ? "Save the edited resume, preview it again, then approve the saved version." : !resumeFits && form.tailoredResume.trim() ? "This draft is too long for the fixed one-page format. Remove or tighten a few bullets, save it, and preview again." : "Approve this reviewed version to enable copy, DOCX, and PDF exports."}</p>}
+            </div>
+            <div className="mt-4 rounded-lg border border-border/70 bg-background/40 p-3">
+              <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+                <div><p className="text-sm font-medium">Edit source draft</p><p className="text-xs text-muted-foreground">The preview above is the clean resume. Open the source only to make deliberate content edits.</p></div>
+                <Button type="button" size="sm" variant="outline" className="bg-card" onClick={() => setShowResumeEditor(open => !open)}>{showResumeEditor ? "Hide editor" : "Edit resume"}</Button>
+              </div>
+              {showResumeEditor && <Textarea value={form.tailoredResume} onChange={event => setForm({ ...form, tailoredResume: event.target.value })} placeholder="Generate a tailored resume after saving your master profile…" className="mt-3 min-h-[350px] font-mono text-[13px] leading-6" />}
             </div>
           </section>
 

@@ -57,15 +57,28 @@ describe("personal workspace routes", () => {
       role: "Analyst",
       jobDescription: "Use analysis, reporting, and SQL to help the operations team make better decisions every week.",
       contextMode: "full",
+      contactEmail: "hiring@northstar.example",
       status: "to-apply",
       nextAction: "Send a concise note to the hiring team",
       followUpAt: "2026-09-01",
     });
     expect(result).toEqual(created);
     expect(dbMocks.createJob).toHaveBeenCalledWith(personalUser.id, expect.objectContaining({
+      contactEmail: "hiring@northstar.example",
       nextAction: "Send a concise note to the hiring team",
       followUpAt: new Date("2026-09-01T12:00:00.000Z"),
     }));
+  });
+
+  it("requires a recipient email for a Full Details application", async () => {
+    await expect(caller().jobs.create({
+      company: "Northstar",
+      role: "Analyst",
+      jobDescription: "Use analysis, reporting, and SQL to help the operations team make better decisions every week.",
+      contextMode: "full",
+      status: "to-apply",
+    })).rejects.toThrow("Enter the company or hiring email");
+    expect(dbMocks.createJob).not.toHaveBeenCalled();
   });
 
   it("creates a limited-context application with only role, company, and contact email", async () => {
@@ -89,6 +102,16 @@ describe("personal workspace routes", () => {
     dbMocks.updateJobForUser.mockResolvedValue({ id: 9 });
     await caller().jobs.update({ id: 9, nextAction: null, followUpAt: null });
     expect(dbMocks.updateJobForUser).toHaveBeenCalledWith(personalUser.id, 9, { nextAction: null, followUpAt: null });
+  });
+
+  it("persists a recipient email updated from a Full Details workspace", async () => {
+    dbMocks.updateJobForUser.mockResolvedValue({ id: 9, contactEmail: "talent@northstar.example" });
+
+    await caller().jobs.update({ id: 9, contactEmail: "talent@northstar.example" });
+
+    expect(dbMocks.updateJobForUser).toHaveBeenCalledWith(personalUser.id, 9, {
+      contactEmail: "talent@northstar.example",
+    });
   });
 
   it("persists approval only after a tailored resume exists", async () => {

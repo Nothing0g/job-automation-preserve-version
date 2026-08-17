@@ -7,6 +7,7 @@ import { buildEmailMessages, buildLimitedContextEmailMessages, buildResumeMessag
 import { fetchPublicJobPosting } from "./lib/jobPosting";
 import { parseFollowUpDate } from "./lib/jobTracker";
 import { appendEmailSignature } from "./lib/emailSignature";
+import { cleanEmailDraft } from "./lib/emailDraft";
 import { resumeFitsOnePage } from "./lib/onePageResume";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { invokeLLM, listLLMModels } from "./_core/llm";
@@ -46,8 +47,8 @@ const createJobSchema = z.object(jobFields).superRefine((input, context) => {
   if (input.contextMode === "full" && input.jobDescription.length < 40) {
     context.addIssue({ code: "custom", path: ["jobDescription"], message: "Paste at least 40 characters of the job description, or use No JD Mode." });
   }
-  if (input.contextMode === "limited" && !input.contactEmail) {
-    context.addIssue({ code: "custom", path: ["contactEmail"], message: "Enter the contact email for a No JD application." });
+  if (!input.contactEmail) {
+    context.addIssue({ code: "custom", path: ["contactEmail"], message: "Enter the company or hiring email so Gmail can prefill the recipient." });
   }
 });
 
@@ -205,13 +206,13 @@ export const appRouter = router({
         const model = await preferredModel();
         if (job.contextMode === "limited") {
           const emailResult = await invokeLLM({ model, messages: buildLimitedContextEmailMessages(profileContext, job), maxTokens: 1400 });
-          return db.updateJobForUser(user.id, job.id, { emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
+          return db.updateJobForUser(user.id, job.id, { emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature) });
         }
         const [tailoredResume, emailResult] = await Promise.all([
           generateOnePageResume(model, profileContext, job),
           invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),
         ]);
-        return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(contentFrom(emailResult), profile.emailSignature) });
+        return db.updateJobForUser(user.id, job.id, { tailoredResume, tailoredResumeApprovedAt: null, emailDraft: appendEmailSignature(cleanEmailDraft(contentFrom(emailResult)), profile.emailSignature) });
       }),
   }),
 });

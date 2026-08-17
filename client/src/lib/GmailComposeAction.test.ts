@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { GmailComposeAction } from "../components/GmailComposeAction";
+import { buildGmailComposeUrl } from "./gmailCompose";
 
 describe("GmailComposeAction", () => {
   it("renders an active compose anchor and recipient-entry guidance when no contact is stored", () => {
@@ -22,5 +23,21 @@ describe("GmailComposeAction", () => {
     expect(markup).toContain("Compose in Gmail");
     expect(markup).toContain("Your saved recipient is included");
     expect(markup).toContain('target="_blank"');
+  });
+
+  it("forwards an updated workspace recipient into the Gmail compose action", () => {
+    const updatedRecipient = "talent@northstar.example";
+    const composeUrl = buildGmailComposeUrl({
+      to: updatedRecipient,
+      subject: "Application for Analyst at Northstar",
+      body: "Hello Northstar team,",
+    });
+    const markup = renderToStaticMarkup(createElement(GmailComposeAction, {
+      composeUrl,
+      recipient: updatedRecipient,
+    }));
+
+    expect(markup).toContain("Your saved recipient is included");
+    expect(markup).toContain("to=talent%40northstar.example");
   });
 });

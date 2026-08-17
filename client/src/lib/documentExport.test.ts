@@ -30,6 +30,15 @@ describe("document export formatting", () => {
       ]);
   });
 
+  it("returns clean heading text for the structured on-screen resume preview", () => {
+    expect(formatDraftBlocks("# Candidate Name\n## EXPERIENCE\n### Analyst\n- Built reports")).toEqual([
+      { type: "heading", text: "Candidate Name", level: 1 },
+      { type: "heading", text: "EXPERIENCE", level: 2 },
+      { type: "heading", text: "Analyst", level: 3 },
+      { type: "bullet", text: "Built reports" },
+    ]);
+  });
+
   it("uses descriptive filenames for both supported formats", () => {
     expect(createExportFilename("northstar-data-analyst", "resume", "docx"))
       .toBe("northstar-data-analyst-tailored-resume.docx");
