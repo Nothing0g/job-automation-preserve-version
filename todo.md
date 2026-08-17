@@ -106,3 +106,8 @@
 - [x] Record separate dashboard and workspace visual checks for the redesigned light and dark themes.
 - [x] Inspect an actual job workspace in both daylight and dark themes and record its visual QA separately.
 - [x] Add a focused UI regression confirming an updated workspace recipient is forwarded to the Gmail compose action.
+- [x] Research current public job-board entry points and document a terms-respecting live-link discovery approach.
+- [x] Add a Job Discovery route and navigation entry to the personal workspace.
+- [x] Build role and optional-location search links for selected trusted public job sources without copying third-party listings.
+- [x] Add regression coverage for the role/location outbound search-link builder.
+- [x] Visually validate the responsive Job Discovery experience and record the result.

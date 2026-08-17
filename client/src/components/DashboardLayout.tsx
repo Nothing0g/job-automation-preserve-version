@@ -1,12 +1,13 @@
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useIsMobile } from "@/hooks/useMobile";
-import { BriefcaseBusiness, Moon, PanelLeft, Sun, UserRound } from "lucide-react";
+import { BriefcaseBusiness, Compass, Moon, PanelLeft, Sun, UserRound } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 const menuItems = [
   { icon: BriefcaseBusiness, label: "Applications", path: "/" },
+  { icon: Compass, label: "Job discovery", path: "/discover" },
   { icon: UserRound, label: "Master profile", path: "/profile" },
 ];
 const SIDEBAR_WIDTH_KEY = "job-studio-sidebar-width";
