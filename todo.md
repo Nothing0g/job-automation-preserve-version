@@ -12,3 +12,15 @@
 - [x] Implement copy and text-download actions for tailored resumes and outreach emails.
 - [x] Add unit tests for data validation, AI prompt grounding, and supported import parsing.
 - [x] Verify the responsive interface, validate key workflows, and save a final project checkpoint.
+- [x] Fix the profile query so missing profile data returns a defined null value instead of causing a client query error.
+- [x] Remove the visible sign-in requirement and make the workspace operate as a personal direct-access tool.
+- [x] Add a practical application action tracker with editable next action and follow-up date for each job.
+- [x] Replace Google Sheet import with a focused job-intake form that creates the job and produces the requested grounded drafts.
+- [x] Add a polished light/dark mode switch with beautiful, cohesive, and readable themes.
+- [x] Prepare a GitHub-ready repository handoff and document the limits and requirements for hosting this full-stack app on Vercel.
+- [x] Add regression tests and validate the personal workflow, new tracker, themes, and deployment handoff.
+- [x] Add regression coverage for a missing master profile and the direct personal-workspace identity fallback.
+- [x] Add regression coverage for job tracker fields in the create and update persistence contract.
+- [x] Record explicit manual validation evidence for the light/dark switch and external-hosting handoff.
+- [x] Test the direct-access user creation-or-reuse fallback through the production helper contract.
+- [x] Perform and record an actual dark-mode visual QA pass for the dashboard and master profile pages.

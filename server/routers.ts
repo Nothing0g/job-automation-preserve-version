@@ -1,23 +1,34 @@
+import { COOKIE_NAME } from "@shared/const";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { applicationStatuses } from "../drizzle/schema";
 import * as db from "./db";
 import { buildEmailMessages, buildResumeMessages } from "./lib/aiPrompts";
-import { buildSheetCsvUrl, parseJobsFromCsv } from "./lib/sheetImport";
-import { invokeLLM, listLLMModels } from "./_core/llm";
+import { parseFollowUpDate } from "./lib/jobTracker";
 import { getSessionCookieOptions } from "./_core/cookies";
+import { invokeLLM, listLLMModels } from "./_core/llm";
 import { systemRouter } from "./_core/systemRouter";
-import { protectedProcedure, publicProcedure, router } from "./_core/trpc";
+import { publicProcedure, router } from "./_core/trpc";
 import { storageGetSignedUrl, storagePut } from "./storage";
-import { COOKIE_NAME } from "@shared/const";
 
 const statusSchema = z.enum(applicationStatuses);
+const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 const jobFields = {
   company: z.string().trim().min(1).max(255),
   role: z.string().trim().min(1).max(255),
   jobDescription: z.string().trim().min(40).max(100_000),
   status: statusSchema,
+  nextAction: z.string().trim().max(500).nullable().optional(),
+  followUpAt: dateInputSchema.nullable().optional(),
 };
+
+async function personalUser() {
+  try {
+    return await db.getPersonalUser();
+  } catch {
+    throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Your personal workspace could not be initialized." });
+  }
+}
 
 function contentFrom(result: Awaited<ReturnType<typeof invokeLLM>>) {
   const content = result.choices[0]?.message.content;
@@ -29,17 +40,14 @@ function contentFrom(result: Awaited<ReturnType<typeof invokeLLM>>) {
 
 async function preferredModel() {
   const catalog = await listLLMModels();
-  return (
-    catalog.data.find(model => model.id.startsWith("claude-sonnet"))?.id ??
-    catalog.data.find(model => model.id === "gpt-5")?.id ??
-    catalog.data.find(model => model.id.startsWith("gpt-5"))?.id
-  );
+  return catalog.data.find(model => model.id.startsWith("claude-sonnet"))?.id ?? catalog.data.find(model => model.id === "gpt-5")?.id ?? catalog.data.find(model => model.id.startsWith("gpt-5"))?.id;
 }
 
 export const appRouter = router({
   system: systemRouter,
+  // Kept for framework compatibility; the product itself does not show a sign-in flow.
   auth: router({
-    me: publicProcedure.query(opts => opts.ctx.user),
+    me: publicProcedure.query(async () => null),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -47,13 +55,20 @@ export const appRouter = router({
     }),
   }),
   profile: router({
-    get: protectedProcedure.query(({ ctx }) => db.getMasterProfile(ctx.user.id)),
-    save: protectedProcedure
+    get: publicProcedure.query(async () => {
+      const user = await personalUser();
+      return (await db.getMasterProfile(user.id)) ?? null;
+    }),
+    save: publicProcedure
       .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional() }))
-      .mutation(({ ctx, input }) => db.saveMasterProfile(ctx.user.id, input)),
-    uploadPdf: protectedProcedure
+      .mutation(async ({ input }) => {
+        const user = await personalUser();
+        return db.saveMasterProfile(user.id, input);
+      }),
+    uploadPdf: publicProcedure
       .input(z.object({ filename: z.string().min(1).max(255), mimeType: z.string(), base64: z.string().min(16).max(12_000_000) }))
-      .mutation(async ({ ctx, input }) => {
+      .mutation(async ({ input }) => {
+        const user = await personalUser();
         if (input.mimeType !== "application/pdf" && !input.filename.toLowerCase().endsWith(".pdf")) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Upload a PDF resume or paste the resume as text." });
         }
@@ -62,15 +77,18 @@ export const appRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: "The resume must be a valid PDF smaller than 8 MB." });
         }
         const safeFilename = input.filename.replace(/[^a-zA-Z0-9._-]/g, "-");
-        const stored = await storagePut(`users/${ctx.user.id}/master-resume/${safeFilename}`, bytes, "application/pdf");
-        return db.saveMasterProfile(ctx.user.id, { resumeFileKey: stored.key });
+        const stored = await storagePut(`personal-workspace/master-resume/${safeFilename}`, bytes, "application/pdf");
+        return db.saveMasterProfile(user.id, { resumeFileKey: stored.key });
       }),
   }),
   jobs: router({
-    list: protectedProcedure.query(({ ctx }) => db.listJobs(ctx.user.id)),
-    get: protectedProcedure.input(z.object({ id: z.number().int().positive() })).query(({ ctx, input }) => db.getJobForUser(ctx.user.id, input.id)),
-    create: protectedProcedure.input(z.object(jobFields)).mutation(({ ctx, input }) => db.createJob(ctx.user.id, input)),
-    update: protectedProcedure
+    list: publicProcedure.query(async () => db.listJobs((await personalUser()).id)),
+    get: publicProcedure.input(z.object({ id: z.number().int().positive() })).query(async ({ input }) => db.getJobForUser((await personalUser()).id, input.id)),
+    create: publicProcedure.input(z.object(jobFields)).mutation(async ({ input }) => {
+      const user = await personalUser();
+      return db.createJob(user.id, { ...input, nextAction: input.nextAction || null, followUpAt: parseFollowUpDate(input.followUpAt) });
+    }),
+    update: publicProcedure
       .input(z.object({
         id: z.number().int().positive(),
         company: jobFields.company.optional(),
@@ -80,35 +98,25 @@ export const appRouter = router({
         tailoredResume: z.string().max(100_000).optional(),
         emailDraft: z.string().max(40_000).optional(),
         notes: z.string().max(40_000).optional(),
+        nextAction: jobFields.nextAction,
+        followUpAt: jobFields.followUpAt,
       }))
-      .mutation(async ({ ctx, input }) => {
-        const { id, ...data } = input;
-        const updated = await db.updateJobForUser(ctx.user.id, id, data);
+      .mutation(async ({ input }) => {
+        const user = await personalUser();
+        const { id, followUpAt, nextAction, ...data } = input;
+        const updated = await db.updateJobForUser(user.id, id, {
+          ...data,
+          ...(nextAction === undefined ? {} : { nextAction: nextAction || null }),
+          ...(followUpAt === undefined ? {} : { followUpAt: parseFollowUpDate(followUpAt) }),
+        });
         if (!updated) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         return updated;
       }),
-    importSheet: protectedProcedure
-      .input(z.object({ sheetUrl: z.string().url().max(2_000), sheetName: z.string().trim().min(1).max(200) }))
-      .mutation(async ({ ctx, input }) => {
-        let csvUrl: string;
-        try {
-          csvUrl = buildSheetCsvUrl(input.sheetUrl, input.sheetName);
-        } catch (error) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: error instanceof Error ? error.message : "Invalid Google Sheet URL." });
-        }
-        const response = await fetch(csvUrl, { signal: AbortSignal.timeout(15_000) });
-        if (!response.ok) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: "The selected sheet could not be read. Confirm that anyone with the link can view it and that the tab name is exact." });
-        }
-        const { jobs, skipped } = parseJobsFromCsv(await response.text());
-        if (!jobs.length) throw new TRPCError({ code: "BAD_REQUEST", message: "No complete jobs were found in the selected sheet." });
-        for (const job of jobs) await db.createJob(ctx.user.id, job);
-        return { imported: jobs.length, skipped };
-      }),
-    generateDrafts: protectedProcedure
+    generateDrafts: publicProcedure
       .input(z.object({ id: z.number().int().positive() }))
-      .mutation(async ({ ctx, input }) => {
-        const [profile, job] = await Promise.all([db.getMasterProfile(ctx.user.id), db.getJobForUser(ctx.user.id, input.id)]);
+      .mutation(async ({ input }) => {
+        const user = await personalUser();
+        const [profile, job] = await Promise.all([db.getMasterProfile(user.id), db.getJobForUser(user.id, input.id)]);
         if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         if (!profile || (!profile.resumeText?.trim() && !profile.resumeFileKey)) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Save a master resume before generating a tailored resume or outreach email." });
@@ -120,10 +128,7 @@ export const appRouter = router({
           invokeLLM({ model, messages: buildResumeMessages(profileContext, job), maxTokens: 6000 }),
           invokeLLM({ model, messages: buildEmailMessages(profileContext, job), maxTokens: 1600 }),
         ]);
-        return db.updateJobForUser(ctx.user.id, job.id, {
-          tailoredResume: contentFrom(resumeResult),
-          emailDraft: contentFrom(emailResult),
-        });
+        return db.updateJobForUser(user.id, job.id, { tailoredResume: contentFrom(resumeResult), emailDraft: contentFrom(emailResult) });
       }),
   }),
 });

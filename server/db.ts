@@ -3,11 +3,13 @@ import { drizzle } from "drizzle-orm/mysql2";
 import {
   ApplicationStatus,
   InsertUser,
+  User,
   jobs,
   masterProfiles,
   users,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
+import { createOrReusePersonalUser } from "./lib/personalWorkspace";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -41,7 +43,6 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   updateSet.role = values.role;
   values.lastSignedIn = user.lastSignedIn ?? new Date();
   updateSet.lastSignedIn = values.lastSignedIn;
-
   await db.insert(users).values(values).onDuplicateKeyUpdate({ set: updateSet });
 }
 
@@ -52,15 +53,22 @@ export async function getUserByOpenId(openId: string) {
   return result[0];
 }
 
+/** Maps direct personal access to the project owner's durable workspace record. */
+export async function getPersonalUser() {
+  const db = await getDb();
+  if (!db) throw new Error("Database is unavailable");
+  return createOrReusePersonalUser<User>({
+    ownerOpenId: ENV.ownerOpenId,
+    find: async openId => (await db.select().from(users).where(eq(users.openId, openId)).limit(1))[0],
+    create: async seed => { await db.insert(users).values(seed); },
+  });
+}
+
 export async function getMasterProfile(userId: number) {
   const db = await getDb();
-  if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(masterProfiles)
-    .where(eq(masterProfiles.userId, userId))
-    .limit(1);
-  return result[0];
+  if (!db) return null;
+  const result = await db.select().from(masterProfiles).where(eq(masterProfiles.userId, userId)).limit(1);
+  return result[0] ?? null;
 }
 
 export async function saveMasterProfile(
@@ -71,10 +79,7 @@ export async function saveMasterProfile(
   if (!db) throw new Error("Database is unavailable");
   const current = await getMasterProfile(userId);
   if (current) {
-    await db
-      .update(masterProfiles)
-      .set({ ...data, updatedAt: new Date() })
-      .where(eq(masterProfiles.userId, userId));
+    await db.update(masterProfiles).set({ ...data, updatedAt: new Date() }).where(eq(masterProfiles.userId, userId));
   } else {
     await db.insert(masterProfiles).values({
       userId,
@@ -89,21 +94,13 @@ export async function saveMasterProfile(
 export async function listJobs(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
-    .from(jobs)
-    .where(eq(jobs.userId, userId))
-    .orderBy(desc(jobs.updatedAt));
+  return db.select().from(jobs).where(eq(jobs.userId, userId)).orderBy(desc(jobs.updatedAt));
 }
 
 export async function getJobForUser(userId: number, jobId: number) {
   const db = await getDb();
   if (!db) return undefined;
-  const result = await db
-    .select()
-    .from(jobs)
-    .where(and(eq(jobs.id, jobId), eq(jobs.userId, userId)))
-    .limit(1);
+  const result = await db.select().from(jobs).where(and(eq(jobs.id, jobId), eq(jobs.userId, userId))).limit(1);
   return result[0];
 }
 
@@ -114,6 +111,8 @@ export async function createJob(
     role: string;
     jobDescription: string;
     status: ApplicationStatus;
+    nextAction?: string | null;
+    followUpAt?: Date | null;
   },
 ) {
   const db = await getDb();
@@ -133,13 +132,12 @@ export async function updateJobForUser(
     tailoredResume: string;
     emailDraft: string;
     notes: string;
+    nextAction: string | null;
+    followUpAt: Date | null;
   }>,
 ) {
   const db = await getDb();
   if (!db) throw new Error("Database is unavailable");
-  await db
-    .update(jobs)
-    .set({ ...data, updatedAt: new Date() })
-    .where(and(eq(jobs.id, jobId), eq(jobs.userId, userId)));
+  await db.update(jobs).set({ ...data, updatedAt: new Date() }).where(and(eq(jobs.id, jobId), eq(jobs.userId, userId)));
   return getJobForUser(userId, jobId);
 }

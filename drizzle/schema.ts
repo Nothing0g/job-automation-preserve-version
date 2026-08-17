@@ -59,6 +59,8 @@ export const jobs = mysqlTable(
     tailoredResume: text("tailoredResume"),
     emailDraft: text("emailDraft"),
     notes: text("notes"),
+    nextAction: varchar("nextAction", { length: 500 }),
+    followUpAt: timestamp("followUpAt"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

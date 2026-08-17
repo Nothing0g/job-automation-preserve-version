@@ -15,6 +15,13 @@
       "when": 1786965121878,
       "tag": "0001_good_the_captain",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1786966213279,
+      "tag": "0002_clammy_loki",
+      "breakpoints": true
     }
   ]
 }
