@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import JSZip from "jszip";
-import { createDocxBlob, createExportFilename, createPdfArrayBuffer, formatDraftBlocks, resumeFitsOnePage } from "./documentExport";
+import { createDocxBlob, createExportFilename, createPdfArrayBuffer, formatDraftBlocks, resumeFitsOnePage, resumeHeader } from "./documentExport";
 
 const sampleDocument = {
   company: "Northstar",
@@ -59,6 +59,27 @@ describe("document export formatting", () => {
     expect(pdfText).toContain("/Subtype /Link");
     expect(pdfText).toContain("/URI (mailto:candidate@example.com)");
     expect(pdfText).toContain("/URI (tel:+919876543210)");
+    expect(pdfText).toContain("/URI (https://candidate.dev)");
+  });
+
+  it("places concise saved-link labels in the resume header and removes the legacy contact line", async () => {
+    const contactLinks = { email: "candidate@example.com", github: "https://github.com/candidate", portfolio: "https://candidate.dev" };
+    const content = "# Candidate Name\ncandidate@example.com · New Delhi · GitHub\n## EXPERIENCE\n### Analyst\n- Built a factual reporting workflow.";
+    const header = resumeHeader(content, contactLinks);
+    const docx = await createDocxBlob({ ...sampleDocument, content, contactLinks });
+    const zip = await JSZip.loadAsync(await docx.arrayBuffer());
+    const documentXml = await zip.file("word/document.xml")?.async("text");
+    const relationships = await zip.file("word/_rels/document.xml.rels")?.async("text");
+    const pdfText = new TextDecoder().decode(new Uint8Array(createPdfArrayBuffer({ ...sampleDocument, content, contactLinks })));
+
+    expect(header.links.map(link => link.label)).toEqual(["Email", "GitHub", "Portfolio"]);
+    expect(header.body.map(block => block.text)).not.toContain("candidate@example.com · New Delhi · GitHub");
+    expect(documentXml).toContain("Email");
+    expect(documentXml).toContain("Portfolio");
+    expect(relationships).toContain("mailto:candidate@example.com");
+    expect(relationships).toContain("https://candidate.dev");
+    expect(pdfText).toContain("/URI (mailto:candidate@example.com)");
+    expect(pdfText).toContain("/URI (https://github.com/candidate)");
     expect(pdfText).toContain("/URI (https://candidate.dev)");
   });
 

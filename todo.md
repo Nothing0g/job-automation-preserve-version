@@ -61,5 +61,13 @@
 - [x] Perform and record visual QA of the redesigned workspace in both light and dark modes.
 - [x] Assert PDF URI annotations directly in automated document-export coverage.
 - [ ] Verify the exported contact links through an end-to-end open-and-click workflow and record the result.
+- [x] Move saved Email, Mobile, LinkedIn, GitHub, and Portfolio links into the tailored-resume header as concise clickable labels in DOCX and PDF output.
+- [x] Ensure the resume preview header shows only active saved profile links with no raw URLs or duplicate cover-letter-only link treatment.
+- [x] Replace the current interface visual treatment with a classier minimalist colour system for both light and dark modes.
+- [x] Add automated coverage and visual QA for the resume-header links and refined light/dark interface.
+- [x] Run and record a final light-mode visual QA pass of the actual job workspace after the last palette refinement.
+- [x] Confirm export-test assertions explicitly cover the saved clickable resume-header labels in both DOCX and PDF output.
+- [x] Re-read the QA record to confirm the final light-mode workspace review is preserved.
+- [x] Re-run the full regression suite and TypeScript check after the strengthened resume-header link assertions.
 - [x] Record separate dashboard and workspace visual checks for the redesigned light and dark themes.
 - [x] Inspect an actual job workspace in both daylight and dark themes and record its visual QA separately.

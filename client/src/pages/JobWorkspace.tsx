@@ -3,7 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { trpc } from "@/lib/trpc";
-import { exportDocx, exportPdf, formatDraftBlocks, resumeFitsOnePage, type ContactLinks, type ExportDocumentKind } from "@/lib/documentExport";
+import { exportDocx, exportPdf, resumeFitsOnePage, resumeHeader, type ContactLinks, type ExportDocumentKind } from "@/lib/documentExport";
 import { ArrowLeft, CalendarClock, CheckCircle2, Clipboard, Download, Eye, FileDown, FileText, RotateCcw, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { Link, useRoute } from "wouter";
@@ -31,17 +31,15 @@ function ExportActions({ content, kind, fileStem, company, role, contactLinks, r
   return <div className="flex flex-wrap gap-1"><Button type="button" size="sm" variant="ghost" title={disabledTitle} disabled={disabled} onClick={() => copyText(content, label)}><Clipboard className="mr-1.5 h-3.5 w-3.5" />Copy</Button><Button type="button" size="sm" variant="ghost" title={disabledTitle} disabled={disabled} onClick={() => downloadText(content, `${fileStem}-${kind}.txt`)}><Download className="mr-1.5 h-3.5 w-3.5" />Text</Button><Button type="button" size="sm" variant="outline" className="bg-background" title={disabledTitle} disabled={disabled} onClick={() => void createDocx()}><FileText className="mr-1.5 h-3.5 w-3.5" />DOCX</Button><Button type="button" size="sm" variant="outline" className="bg-background" title={disabledTitle} disabled={disabled} onClick={createPdf}><FileDown className="mr-1.5 h-3.5 w-3.5" />PDF</Button></div>;
 }
 
-function ResumePreview({ content }: { content: string }) {
-  let beforeFirstSection = true;
-  return <article aria-label="One-page resume preview" className="rounded-xl border bg-card px-5 py-4 font-serif text-[11px] leading-[1.35] text-foreground shadow-sm sm:px-7">{content.trim() ? formatDraftBlocks(content).map((block, index) => {
-    const isContactLine = beforeFirstSection && index > 0 && block.type === "paragraph";
-    if (block.type === "heading" && block.level === 2) beforeFirstSection = false;
-    if (block.type === "heading" && block.level === 1) return <p key={index} className="text-center text-base font-bold tracking-[0.08em]">{block.text.toUpperCase()}</p>;
+function ResumePreview({ content, contactLinks }: { content: string; contactLinks?: ContactLinks }) {
+  const { data: previewProfile } = trpc.profile.get.useQuery();
+  const { name, links, body } = resumeHeader(content, contactLinks ?? previewProfile?.contactLinks);
+  return <article aria-label="One-page resume preview" className="rounded-lg border bg-card px-5 py-4 font-serif text-[11px] leading-[1.35] text-foreground sm:px-7">{content.trim() ? <>{name && <p className="text-center text-base font-bold tracking-[0.08em]">{name.toUpperCase()}</p>}{links.length > 0 && <p className="mb-1 text-center font-sans text-[10px] text-primary">{links.map((link, index) => <span key={link.label}>{index > 0 && <span className="px-1 text-muted-foreground">·</span>}<a href={link.href} target="_blank" rel="noreferrer" className="underline decoration-primary/50 underline-offset-2 hover:text-foreground">{link.label}</a></span>)}</p>}{body.map((block, index) => {
     if (block.type === "heading" && block.level === 2) return <p key={index} className="mt-2 border-b border-foreground pb-0.5 text-[10px] font-bold tracking-[0.04em]">{block.text.toUpperCase()}</p>;
     if (block.type === "heading" && block.level === 3) return <p key={index} className="mt-1 font-bold">{block.text}</p>;
     if (block.type === "bullet") return <p key={index} className="ml-3 pl-1 before:mr-1 before:content-['•']">{block.text}</p>;
-    return <p key={index} className={isContactLine ? "mb-1 text-center text-[10px]" : ""}>{block.text}</p>;
-  }) : <p className="font-sans text-sm text-muted-foreground">Generate a tailored resume to review it here before any export is enabled.</p>}</article>;
+    return <p key={index}>{block.text}</p>;
+  })}</> : <p className="font-sans text-sm text-muted-foreground">Generate a tailored resume to review it here before any export is enabled.</p>}</article>;
 }
 
 export default function JobWorkspace() {
