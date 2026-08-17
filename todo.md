@@ -61,6 +61,12 @@
 - [x] Perform and record visual QA of the redesigned workspace in both light and dark modes.
 - [x] Assert PDF URI annotations directly in automated document-export coverage.
 - [ ] Verify the exported contact links through an end-to-end open-and-click workflow and record the result.
+- [x] Verify and document the ATS-safe resume structure and export constraints.
+- [x] Add a manual Gmail compose action that pre-fills the recipient, subject, and personalized email draft without sending it.
+- [x] Add automated coverage and manual validation for the Gmail compose URL and its manual-send boundary.
+- [x] Document the ATS-safe resume structure and export constraints in the QA record using the implemented preview and export rules.
+- [x] Re-read the QA record to confirm the ATS-safe resume documentation and Gmail no-send boundary are both preserved.
+- [ ] Validate the Gmail compose handoff in the browser, confirming recipient, subject, and body prefill while retaining the user-only Send action.
 - [x] Move saved Email, Mobile, LinkedIn, GitHub, and Portfolio links into the tailored-resume header as concise clickable labels in DOCX and PDF output.
 - [x] Ensure the resume preview header shows only active saved profile links with no raw URLs or duplicate cover-letter-only link treatment.
 - [x] Replace the current interface visual treatment with a classier minimalist colour system for both light and dark modes.
