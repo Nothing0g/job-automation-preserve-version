@@ -43,6 +43,13 @@
       "when": 1786969613604,
       "tag": "0005_eager_forge",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1786971018303,
+      "tag": "0006_sharp_tenebrous",
+      "breakpoints": true
     }
   ]
 }

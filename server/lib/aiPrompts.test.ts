@@ -21,6 +21,9 @@ describe("grounded AI prompts", () => {
     const messages = buildEmailMessages(profile, job);
     expect(String(messages[0].content)).toContain("Do not use external research");
     expect(String(messages[0].content)).toContain("only the email body");
+    expect(String(messages[0].content)).toContain("came across the");
+    expect(String(messages[0].content)).toContain("perfect fit");
+    expect(String(messages[0].content)).toContain("Build confidence through evidence");
   });
 
   it("uses a factual email-only approach when no job description is available", () => {

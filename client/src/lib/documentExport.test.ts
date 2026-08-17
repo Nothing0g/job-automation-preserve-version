@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import JSZip from "jszip";
 import { createDocxBlob, createExportFilename, createPdfArrayBuffer, formatDraftBlocks, resumeFitsOnePage } from "./documentExport";
 
 const sampleDocument = {
@@ -20,6 +21,15 @@ describe("document export formatting", () => {
       ]);
   });
 
+  it("removes raw Markdown fences and divider-only lines from export content", () => {
+    expect(formatDraftBlocks("```markdown\n# Candidate\n---\n## Experience\n- Built a dashboard\n```"))
+      .toEqual([
+        { type: "heading", text: "Candidate", level: 1 },
+        { type: "heading", text: "Experience", level: 2 },
+        { type: "bullet", text: "Built a dashboard" },
+      ]);
+  });
+
   it("uses descriptive filenames for both supported formats", () => {
     expect(createExportFilename("northstar-data-analyst", "resume", "docx"))
       .toBe("northstar-data-analyst-tailored-resume.docx");
@@ -29,11 +39,27 @@ describe("document export formatting", () => {
 
   it("creates non-empty DOCX and PDF document bytes from a saved draft", async () => {
     const [docx, pdf] = await Promise.all([
-      createDocxBlob(sampleDocument),
-      Promise.resolve(createPdfArrayBuffer(sampleDocument)),
+      createDocxBlob({ ...sampleDocument, kind: "cover-letter", contactLinks: { email: "candidate@example.com", github: "https://github.com/candidate" } }),
+      Promise.resolve(createPdfArrayBuffer({ ...sampleDocument, kind: "cover-letter", contactLinks: { email: "candidate@example.com", github: "https://github.com/candidate" } })),
     ]);
     expect(docx.size).toBeGreaterThan(500);
     expect(pdf.byteLength).toBeGreaterThan(500);
+  });
+
+  it("embeds saved contact details as clickable DOCX and PDF hyperlinks", async () => {
+    const contactLinks = { email: "candidate@example.com", phone: "+91 98765 43210", linkedin: "https://linkedin.com/in/candidate", github: "https://github.com/candidate", portfolio: "https://candidate.dev" };
+    const docx = await createDocxBlob({ ...sampleDocument, kind: "cover-letter", contactLinks });
+    const zip = await JSZip.loadAsync(await docx.arrayBuffer());
+    const relationships = await zip.file("word/_rels/document.xml.rels")?.async("text");
+    const pdfText = new TextDecoder().decode(new Uint8Array(createPdfArrayBuffer({ ...sampleDocument, kind: "cover-letter", contactLinks })));
+
+    expect(relationships).toContain("mailto:candidate@example.com");
+    expect(relationships).toContain("tel:+919876543210");
+    expect(relationships).toContain("https://github.com/candidate");
+    expect(pdfText).toContain("/Subtype /Link");
+    expect(pdfText).toContain("/URI (mailto:candidate@example.com)");
+    expect(pdfText).toContain("/URI (tel:+919876543210)");
+    expect(pdfText).toContain("/URI (https://candidate.dev)");
   });
 
   it("keeps resume exports to one page by rejecting content that cannot fit the compact layout", () => {

@@ -51,3 +51,15 @@
 - [x] Add automated and manual validation for the one-page preview, approval, and export workflow.
 - [x] Enforce fixed one-page compliance during AI resume generation before a draft is saved.
 - [x] Add regression coverage showing that an overlong generated resume is shortened or rejected before persistence.
+- [x] Remove raw Markdown fences and horizontal-divider artifacts from generated resume previews and exports.
+- [x] Refine grounded outreach generation with a warm, conversational opening that acknowledges the discovered role without unsupported claims.
+- [x] Add editable social and contact links to the master profile, with validation and clickable document export rendering.
+- [x] Redesign the application workspace with a more distinctive, restrained visual system across light and dark themes.
+- [x] Validate resume cleanup, outbound links, outreach tone, and redesigned light/dark visual states with automated and manual QA.
+- [x] Add focused automated coverage confirming contact hyperlinks are embedded in generated cover-letter exports.
+- [x] Manually verify clickable contact links in exported DOCX and PDF cover letters.
+- [x] Perform and record visual QA of the redesigned workspace in both light and dark modes.
+- [x] Assert PDF URI annotations directly in automated document-export coverage.
+- [ ] Verify the exported contact links through an end-to-end open-and-click workflow and record the result.
+- [x] Record separate dashboard and workspace visual checks for the redesigned light and dark themes.
+- [x] Inspect an actual job workspace in both daylight and dark themes and record its visual QA separately.

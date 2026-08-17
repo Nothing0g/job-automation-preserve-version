@@ -42,6 +42,7 @@ export const masterProfiles = mysqlTable(
     resumeFileKey: varchar("resumeFileKey", { length: 512 }),
     personalBio: text("personalBio"),
     emailSignature: text("emailSignature"),
+    contactLinks: text("contactLinks"),
     createdAt: timestamp("createdAt").defaultNow().notNull(),
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   },

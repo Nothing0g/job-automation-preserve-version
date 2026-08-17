@@ -16,6 +16,20 @@ import { storageGetSignedUrl, storagePut } from "./storage";
 
 const statusSchema = z.enum(applicationStatuses);
 const dateInputSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+const optionalUrl = z.union([z.string().trim().url().max(1_000), z.literal("")]);
+const contactLinksSchema = z.object({
+  email: z.union([z.string().trim().email().max(320), z.literal("")]),
+  phone: z.string().trim().max(80),
+  linkedin: optionalUrl,
+  github: optionalUrl,
+  portfolio: optionalUrl,
+}).default({ email: "", phone: "", linkedin: "", github: "", portfolio: "" });
+type ContactLinks = z.infer<typeof contactLinksSchema>;
+
+function contactLinksFromStored(value: string | null): ContactLinks {
+  if (!value) return { email: "", phone: "", linkedin: "", github: "", portfolio: "" };
+  try { return contactLinksSchema.parse(JSON.parse(value)); } catch { return { email: "", phone: "", linkedin: "", github: "", portfolio: "" }; }
+}
 const jobFields = {
   company: z.string().trim().min(1).max(255),
   role: z.string().trim().min(1).max(255),
@@ -83,13 +97,16 @@ export const appRouter = router({
   profile: router({
     get: publicProcedure.query(async () => {
       const user = await personalUser();
-      return (await db.getMasterProfile(user.id)) ?? null;
+      const profile = await db.getMasterProfile(user.id);
+      return profile ? { ...profile, contactLinks: contactLinksFromStored(profile.contactLinks) } : null;
     }),
     save: publicProcedure
-      .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional(), emailSignature: z.string().max(6_000).optional() }))
+      .input(z.object({ resumeText: z.string().max(100_000).optional(), personalBio: z.string().max(20_000).optional(), emailSignature: z.string().max(6_000).optional(), contactLinks: contactLinksSchema.optional() }))
       .mutation(async ({ input }) => {
         const user = await personalUser();
-        return db.saveMasterProfile(user.id, input);
+        const { contactLinks, ...profileInput } = input;
+        const profile = await db.saveMasterProfile(user.id, { ...profileInput, ...(contactLinks ? { contactLinks: JSON.stringify(contactLinks) } : {}) });
+        return profile ? { ...profile, contactLinks: contactLinksFromStored(profile.contactLinks) } : null;
       }),
     uploadPdf: publicProcedure
       .input(z.object({ filename: z.string().min(1).max(255), mimeType: z.string(), base64: z.string().min(16).max(12_000_000) }))
@@ -168,6 +185,9 @@ export const appRouter = router({
         if (!job) throw new TRPCError({ code: "NOT_FOUND", message: "This job no longer exists." });
         if (input.approved && !job.tailoredResume?.trim()) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Generate or save a tailored resume before approving it." });
+        }
+        if (input.approved && !resumeFitsOnePage(job.tailoredResume ?? "")) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "This resume is longer than the fixed one-page layout. Shorten it before approval." });
         }
         return db.updateJobForUser(user.id, job.id, { tailoredResumeApprovedAt: input.approved ? new Date() : null });
       }),

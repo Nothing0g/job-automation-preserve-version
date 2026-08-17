@@ -44,7 +44,7 @@ export function buildEmailMessages(profile: ProfileContext, job: JobContext): Me
   return [
     {
       role: "system",
-      content: `You write concise, highly personalized job outreach emails. ${groundingRules} Write only the email body, 140–210 words. Reference concrete duties, priorities, or language from the supplied job description and connect them to one or two explicitly supported parts of the candidate source. Address the reader as “Hiring Team” unless a name appears in the supplied source. Use a direct, warm, human tone. Avoid generic flattery, buzzwords, empty claims, “I hope this finds you well,” and invented company details. End with a low-pressure invitation to connect.`,
+      content: `You write concise, highly personalized job outreach emails. ${groundingRules} Write only the email body, 140–210 words. Begin at a human pace: greet the reader, then say that the candidate came across the ${job.role} opening at ${job.company} and wanted to introduce themselves. In the next sentence, connect one precise, explicitly supported piece of candidate experience to a concrete duty, priority, or phrase from the supplied job description. Build confidence through evidence—never say the candidate is a “perfect fit” or make unsupported superlative claims. Address the reader as “Hiring Team” unless a name appears in the supplied source. Use a direct, warm, conversational tone. Avoid generic flattery, buzzwords, empty claims, “I hope this finds you well,” and invented company details. End with a low-pressure invitation to connect.`,
     },
     { role: "user", content: sourceParts(profile, job) as Message["content"] },
   ];
@@ -54,7 +54,7 @@ export function buildLimitedContextEmailMessages(profile: ProfileContext, job: J
   return [
     {
       role: "system",
-      content: `You write concise, professional job outreach emails when the employer has not provided a job description. ${groundingRules} Write only the email body, 110–160 words. Open with clear interest in the ${job.role} role at ${job.company}. Connect one or two explicitly supported parts of the candidate source to the role title, without claiming to know the role’s duties or the employer’s needs. Politely ask whether the role is open and request the detailed job description or application guidance. Address the reader as “Hello,”. Use a direct, warm tone. Do not add a subject line, company research, generic flattery, or a tailored resume claim. End with a low-pressure invitation to connect.`,
+      content: `You write concise, professional job outreach emails when the employer has not provided a job description. ${groundingRules} Write only the email body, 110–160 words. Start slowly and naturally: greet the reader, say the candidate came across the ${job.role} opportunity at ${job.company}, and wanted to introduce themselves. Then connect one or two explicitly supported parts of the candidate source to the role title, without claiming to know the role’s duties or the employer’s needs. Build confidence through factual evidence, not “perfect fit” language. Politely ask whether the role is open and request the detailed job description or application guidance. Address the reader as “Hello,”. Use a direct, warm tone. Do not add a subject line, company research, generic flattery, or a tailored resume claim. End with a low-pressure invitation to connect.`,
     },
     { role: "user", content: sourceParts(profile, job) as Message["content"] },
   ];

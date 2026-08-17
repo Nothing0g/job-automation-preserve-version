@@ -4,6 +4,8 @@ type ResumeBlock = { type: "heading" | "bullet" | "paragraph"; text: string; lev
 
 function cleanText(value: string) {
   return value
+    .replace(/^```(?:markdown|md|text)?\s*/i, "")
+    .replace(/\s*```$/i, "")
     .replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/__(.*?)__/g, "$1")
@@ -15,7 +17,7 @@ function blocks(content: string): ResumeBlock[] {
   return content
     .split(/\r?\n/)
     .map(line => line.trim())
-    .filter(Boolean)
+    .filter(line => Boolean(line) && !/^```(?:markdown|md|text)?$/i.test(line) && !/^(?:-{3,}|_{3,}|\*{3,})$/.test(line))
     .map(line => {
       if (line.startsWith("### ")) return { type: "heading" as const, text: cleanText(line.slice(4)), level: 3 as const };
       if (line.startsWith("## ")) return { type: "heading" as const, text: cleanText(line.slice(3)), level: 2 as const };

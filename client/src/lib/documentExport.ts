@@ -1,4 +1,4 @@
-import { AlignmentType, BorderStyle, Document, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
+import { AlignmentType, BorderStyle, Document, ExternalHyperlink, HeadingLevel, Packer, Paragraph, TextRun } from "docx";
 import { jsPDF } from "jspdf";
 
 export type ExportDocumentKind = "resume" | "cover-letter";
@@ -9,12 +9,23 @@ export type DraftBlock = {
   level?: 1 | 2 | 3;
 };
 
+export type ContactLinks = {
+  email?: string;
+  phone?: string;
+  linkedin?: string;
+  github?: string;
+  portfolio?: string;
+};
+
+type DocumentContactLink = { label: string; value: string; href: string };
+
 type ExportDocumentInput = {
   kind: ExportDocumentKind;
   content: string;
   company: string;
   role: string;
   fileStem: string;
+  contactLinks?: ContactLinks;
 };
 
 const documentTitle = (kind: ExportDocumentKind) =>
@@ -22,6 +33,8 @@ const documentTitle = (kind: ExportDocumentKind) =>
 
 function cleanText(value: string) {
   return value
+    .replace(/^```(?:markdown|md|text)?\s*/i, "")
+    .replace(/\s*```$/i, "")
     .replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "")
     .replace(/\*\*(.*?)\*\*/g, "$1")
     .replace(/__(.*?)__/g, "$1")
@@ -38,7 +51,7 @@ export function formatDraftBlocks(content: string): DraftBlock[] {
   return content
     .split(/\r?\n/)
     .map(line => line.trim())
-    .filter(Boolean)
+    .filter(line => Boolean(line) && !/^```(?:markdown|md|text)?$/i.test(line) && !/^(?:-{3,}|_{3,}|\*{3,})$/.test(line))
     .map(line => {
       if (line.startsWith("### ")) return { type: "heading" as const, text: cleanText(line.slice(4)), level: 3 as const };
       if (line.startsWith("## ")) return { type: "heading" as const, text: cleanText(line.slice(3)), level: 2 as const };
@@ -47,6 +60,29 @@ export function formatDraftBlocks(content: string): DraftBlock[] {
       return { type: "paragraph" as const, text: cleanText(line) };
     })
     .filter(block => block.text.length > 0);
+}
+
+function exportContactLinks(contactLinks?: ContactLinks): DocumentContactLink[] {
+  const links = contactLinks ?? {};
+  return [
+    links.email?.trim() ? { label: "Email", value: links.email.trim(), href: `mailto:${links.email.trim()}` } : null,
+    links.phone?.trim() ? { label: "Mobile", value: links.phone.trim(), href: `tel:${links.phone.trim().replace(/[\s()-]/g, "")}` } : null,
+    links.linkedin?.trim() ? { label: "LinkedIn", value: "LinkedIn", href: links.linkedin.trim() } : null,
+    links.github?.trim() ? { label: "GitHub", value: "GitHub", href: links.github.trim() } : null,
+    links.portfolio?.trim() ? { label: "Portfolio", value: "Portfolio", href: links.portfolio.trim() } : null,
+  ].filter((link): link is DocumentContactLink => Boolean(link));
+}
+
+function linkRuns(links: DocumentContactLink[], color = "6B5B52") {
+  return links.flatMap((link, index) => [
+    ...(index > 0 ? [new TextRun({ text: "  ·  ", color, size: 17 })] : []),
+    new ExternalHyperlink({ link: link.href, children: [new TextRun({ text: link.value, color, size: 17, underline: { type: "single", color } })] }),
+  ]);
+}
+
+function coverLetterContactParagraph(contactLinks?: ContactLinks) {
+  const links = exportContactLinks(contactLinks);
+  return links.length ? new Paragraph({ alignment: AlignmentType.LEFT, children: linkRuns(links), spacing: { after: 260 } }) : null;
 }
 
 function downloadBlob(blob: Blob, filename: string) {
@@ -187,6 +223,7 @@ export async function createDocxBlob(input: ExportDocumentInput) {
         : [
           new Paragraph({ children: [new TextRun({ text: title, bold: true, size: 34 })], spacing: { after: 100 } }),
           new Paragraph({ children: [new TextRun({ text: `${input.role} · ${input.company}`, color: "6B5B52", size: 20 })], spacing: { after: 320 } }),
+          ...(coverLetterContactParagraph(input.contactLinks) ? [coverLetterContactParagraph(input.contactLinks)!] : []),
           ...formatDraftBlocks(input.content).map(coverLetterParagraph),
         ],
     }],
@@ -219,6 +256,19 @@ function createPdf(input: ExportDocumentInput) {
   pdf.setTextColor(104, 86, 75);
   pdf.text(`${input.role} · ${input.company}`, margin, y);
   y += 31;
+
+  const links = exportContactLinks(input.contactLinks);
+  if (links.length) {
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(82, 97, 116);
+    let linkX = margin;
+    links.forEach((link, index) => {
+      const label = index > 0 ? ` · ${link.value}` : link.value;
+      pdf.textWithLink(label, linkX, y, { url: link.href });
+      linkX += pdf.getTextWidth(label);
+    });
+    y += 27;
+  }
 
   for (const block of formatDraftBlocks(input.content)) {
     const fontSize = block.type === "heading" ? (block.level === 1 ? 15 : 12) : 10.5;
